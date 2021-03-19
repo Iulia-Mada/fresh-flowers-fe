@@ -11,6 +11,9 @@
             </button>
           </div>
           <div class="modal-body">
+            <div class="success" v-if="savingSuccessful">
+               {{ this.message }}
+            </div>
             <table class="table">
               <tbody>
                 <tr v-for="(item, index) in cart" :key="item.id">
@@ -29,8 +32,8 @@
             </table>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" data-dismiss="modal">Keep shopping</button>
-            <button class="btn btn-primary">Check out</button>
+            <button class="btn btn-secondary"  @click="removeMessage()" data-dismiss="modal">Keep shopping</button>
+            <button class="btn btn-primary"  @click="createOrder()">Check out</button>
           </div>
         </div>
       </div>
@@ -39,8 +42,18 @@
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: 'shoppingCart',
+  data () {
+    return {
+      // we should ask for user email in a form
+      email: 'test@gmail.com',
+      message: 'We have just received your order. Thank you!',
+      savingSuccessful: false
+    }
+  },
   computed: {
     inCart () { return this.$store.getters.inCart },
     numInCart () { return this.inCart.length },
@@ -58,7 +71,48 @@ export default {
   methods: {
     removeFromCart (index) {
       this.$store.dispatch('removeFromCart', index)
+    },
+    clearCart () {
+      this.$store.dispatch('clearCart')
+    },
+    // we should add a quantity attribute on product
+    get_quantity () {
+      let cart = []
+
+      this.inCart.forEach((id) => {
+        let ind = cart.findIndex(v => v.id === id)
+        if (ind !== -1) {
+          cart[ind].quantity += 1
+        } else {
+          cart.push({id: id, quantity: 1})
+        }
+      })
+      return cart
+    },
+    createOrder () {
+      axios.post(process.env.API_BASE_URL + '/api/v1/orders', {
+        order: { email: this.email, products: this.get_quantity() }
+      })
+        .then(response => {
+          console.log(response)
+          this.savingSuccessful = true
+          this.clearCart()
+        })
+        .catch(error => {
+          // we should display errors coming from api
+          console.log(error)
+        })
+    },
+    removeMessage () {
+      this.savingSuccessful = false
     }
   }
 }
 </script>
+<style scoped>
+
+.success {
+  color: #42b983;
+  font-weight: bold;
+}
+</style>
